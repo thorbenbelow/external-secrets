@@ -149,6 +149,10 @@ type SecretStoreProvider struct {
 	// Pulumi configures this store to sync secrets using the Pulumi provider
 	// +optional
 	Pulumi *PulumiProvider `json:"pulumi,omitempty"`
+
+	// Passbolt configures this store to sync secrets using the Passbolt provider
+	// +optional
+	Passbolt *PassboltProvider `json:"passbolt,omitempty"`
 }
 
 type CAProviderType string
