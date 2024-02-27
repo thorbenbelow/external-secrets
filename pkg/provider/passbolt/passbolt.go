@@ -2,13 +2,14 @@ package passbolt
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/external-secrets/external-secrets/apis/externalsecrets/v1beta1"
 	esv1beta1 "github.com/external-secrets/external-secrets/apis/externalsecrets/v1beta1"
 	"github.com/passbolt/go-passbolt/api"
 
+	"github.com/passbolt/go-passbolt/helper"
 	corev1 "k8s.io/api/core/v1"
-	//	"github.com/passbolt/go-passbolt/helper"
 	kclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -31,9 +32,23 @@ func (provider *ProviderPassbolt) NewClient(ctx context.Context, store esv1beta1
 	return provider, nil
 }
 
-func (provider *ProviderPassbolt) GetSecret(ctx context.Context, ref esv1beta1.ExternalSecretDataRemoteRef) ([]byte, error) {
-	return nil, nil
+type PassboltSecret struct {
+	Id             string `json:"id"`
+	FolderParentId string `json:"folderParentId"`
+	Name           string `json:"name"`
+	Username       string `json:"username"`
+	Uri            string `json:"uri"`
+	Password       string `json:"password"`
+	Description    string `json:"description"`
+}
 
+func (provider *ProviderPassbolt) GetSecret(ctx context.Context, ref esv1beta1.ExternalSecretDataRemoteRef) ([]byte, error) {
+	folderParentID, name, username, uri, password, description, err := helper.GetResource(ctx, &provider.client, ref.Key)
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(password), nil
 }
 
 func (provider *ProviderPassbolt) PushSecret(ctx context.Context, secret *corev1.Secret, data v1beta1.PushSecretData) error {
@@ -45,12 +60,25 @@ func (provider *ProviderPassbolt) DeleteSecret(ctx context.Context, remoteRef v1
 }
 
 func (provider *ProviderPassbolt) Validate() (v1beta1.ValidationResult, error) {
-	var res v1beta1.ValidationResult
-	return res, nil
+	return v1beta1.ValidationResultUnknown, nil
 }
 
 func (provider *ProviderPassbolt) GetSecretMap(ctx context.Context, ref v1beta1.ExternalSecretDataRemoteRef) (map[string][]byte, error) {
 	var res map[string][]byte
+
+	folderParentID, name, username, uri, password, description, err := helper.GetResource(ctx, &provider.client, ref.Key)
+
+	if err != nil {
+		return res, nil
+	}
+
+	res["folderParentId"] = []byte(folderParentID)
+	res["name"] = []byte(name)
+	res["username"] = []byte(username)
+	res["description"] = []byte(description)
+	res["uri"] = []byte(uri)
+	res["password"] = []byte(password)
+
 	return res, nil
 }
 

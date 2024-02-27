@@ -3498,6 +3498,27 @@ spec:
                         - region
                         - vault
                       type: object
+                    passbolt:
+                      description: Passbolt configures this store to sync secrets using the Passbolt provider
+                      properties:
+                        auth:
+                          description: Auth defines the information necessary to authenticate against Passbolt Server
+                          properties:
+                            userPassword:
+                              type: string
+                            userPrivateKey:
+                              type: string
+                          required:
+                            - userPassword
+                            - userPrivateKey
+                          type: object
+                        connectHost:
+                          description: ConnectHost defines the Passbolt Server to connect to
+                          type: string
+                      required:
+                        - auth
+                        - connectHost
+                      type: object
                     pulumi:
                       description: Pulumi configures this store to sync secrets using the Pulumi provider
                       properties:
@@ -8559,6 +8580,27 @@ spec:
                       required:
                         - region
                         - vault
+                      type: object
+                    passbolt:
+                      description: Passbolt configures this store to sync secrets using the Passbolt provider
+                      properties:
+                        auth:
+                          description: Auth defines the information necessary to authenticate against Passbolt Server
+                          properties:
+                            userPassword:
+                              type: string
+                            userPrivateKey:
+                              type: string
+                          required:
+                            - userPassword
+                            - userPrivateKey
+                          type: object
+                        connectHost:
+                          description: ConnectHost defines the Passbolt Server to connect to
+                          type: string
+                      required:
+                        - auth
+                        - connectHost
                       type: object
                     pulumi:
                       description: Pulumi configures this store to sync secrets using the Pulumi provider
