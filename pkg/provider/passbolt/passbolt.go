@@ -2,11 +2,13 @@ package passbolt
 
 import (
 	"context"
-	"encoding/json"
+	"log"
 
 	"github.com/external-secrets/external-secrets/apis/externalsecrets/v1beta1"
 	esv1beta1 "github.com/external-secrets/external-secrets/apis/externalsecrets/v1beta1"
 	"github.com/passbolt/go-passbolt/api"
+
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/passbolt/go-passbolt/helper"
 	corev1 "k8s.io/api/core/v1"
@@ -44,6 +46,7 @@ type PassboltSecret struct {
 
 func (provider *ProviderPassbolt) GetSecret(ctx context.Context, ref esv1beta1.ExternalSecretDataRemoteRef) ([]byte, error) {
 	folderParentID, name, username, uri, password, description, err := helper.GetResource(ctx, &provider.client, ref.Key)
+	log.Print(folderParentID, name, username, uri, password, description)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +67,7 @@ func (provider *ProviderPassbolt) Validate() (v1beta1.ValidationResult, error) {
 }
 
 func (provider *ProviderPassbolt) GetSecretMap(ctx context.Context, ref v1beta1.ExternalSecretDataRemoteRef) (map[string][]byte, error) {
-	var res map[string][]byte
+	res := make(map[string][]byte)
 
 	folderParentID, name, username, uri, password, description, err := helper.GetResource(ctx, &provider.client, ref.Key)
 
@@ -89,4 +92,15 @@ func (provider *ProviderPassbolt) GetAllSecrets(ctx context.Context, ref v1beta1
 
 func (provider *ProviderPassbolt) Close(ctx context.Context) error {
 	return nil
+}
+
+func init() {
+	esv1beta1.Register(&ProviderPassbolt{}, &esv1beta1.SecretStoreProvider{
+		Passbolt: &esv1beta1.PassboltProvider{},
+	})
+}
+
+// ValidateStore checks if the provided store is valid.
+func (provider *ProviderPassbolt) ValidateStore(store esv1beta1.GenericStore) (admission.Warnings, error) {
+	return nil, nil
 }
