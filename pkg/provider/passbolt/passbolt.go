@@ -26,6 +26,8 @@ func (provider *ProviderPassbolt) Capabilities() esv1beta1.SecretStoreCapabiliti
 func (provider *ProviderPassbolt) NewClient(ctx context.Context, store esv1beta1.GenericStore, kube kclient.Client, namespace string) (esv1beta1.SecretsClient, error) {
 	config := store.GetSpec().Provider.Passbolt
 
+	log.Println("Create new Passbolt Client")
+
 	client, err := api.NewClient(nil, "", config.ConnectHost, config.Auth.PrivateKey, config.Auth.Password)
 	if err != nil {
 		return nil, err
@@ -45,6 +47,12 @@ type PassboltSecret struct {
 }
 
 func (provider *ProviderPassbolt) GetSecret(ctx context.Context, ref esv1beta1.ExternalSecretDataRemoteRef) ([]byte, error) {
+	if !provider.client.CheckSession(ctx) {
+		log.Println("not logged in")
+		if err := provider.client.Login(ctx); err != nil {
+			return nil, err
+		}
+	}
 	folderParentID, name, username, uri, password, description, err := helper.GetResource(ctx, &provider.client, ref.Key)
 	log.Print(folderParentID, name, username, uri, password, description)
 	if err != nil {
