@@ -28,7 +28,7 @@ func (provider *ProviderPassbolt) NewClient(ctx context.Context, store esv1beta1
 
 	log.Println("Create new Passbolt Client")
 
-	client, err := api.NewClient(nil, "", config.ConnectHost, config.Auth.PrivateKey, config.Auth.Password)
+	client, err := api.NewClient(nil, "", config.Host, config.Auth.PrivateKey, config.Auth.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -36,25 +36,13 @@ func (provider *ProviderPassbolt) NewClient(ctx context.Context, store esv1beta1
 	return provider, nil
 }
 
-type PassboltSecret struct {
-	Id             string `json:"id"`
-	FolderParentId string `json:"folderParentId"`
-	Name           string `json:"name"`
-	Username       string `json:"username"`
-	Uri            string `json:"uri"`
-	Password       string `json:"password"`
-	Description    string `json:"description"`
-}
-
 func (provider *ProviderPassbolt) GetSecret(ctx context.Context, ref esv1beta1.ExternalSecretDataRemoteRef) ([]byte, error) {
 	if !provider.client.CheckSession(ctx) {
-		log.Println("not logged in")
 		if err := provider.client.Login(ctx); err != nil {
 			return nil, err
 		}
 	}
-	folderParentID, name, username, uri, password, description, err := helper.GetResource(ctx, &provider.client, ref.Key)
-	log.Print(folderParentID, name, username, uri, password, description)
+	_, _, _, _, password, _, err := helper.GetResource(ctx, &provider.client, ref.Key)
 	if err != nil {
 		return nil, err
 	}
