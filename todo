@@ -1,0 +1,3 @@
+- add support for dataFrom
+- add limit to SecretStore for groups, folders
+- add support for property

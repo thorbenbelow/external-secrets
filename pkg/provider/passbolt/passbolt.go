@@ -2,7 +2,10 @@ package passbolt
 
 import (
 	"context"
+	"encoding/json"
 	"log"
+	"log/slog"
+	"regexp"
 
 	"github.com/external-secrets/external-secrets/apis/externalsecrets/v1beta1"
 	esv1beta1 "github.com/external-secrets/external-secrets/apis/externalsecrets/v1beta1"
@@ -26,7 +29,7 @@ func (provider *ProviderPassbolt) Capabilities() esv1beta1.SecretStoreCapabiliti
 func (provider *ProviderPassbolt) NewClient(ctx context.Context, store esv1beta1.GenericStore, kube kclient.Client, namespace string) (esv1beta1.SecretsClient, error) {
 	config := store.GetSpec().Provider.Passbolt
 
-	log.Println("Create new Passbolt Client")
+	log.Println("PassboltClientCreate")
 
 	client, err := api.NewClient(nil, "", config.Host, config.Auth.PrivateKey, config.Auth.Password)
 	if err != nil {
@@ -35,22 +38,36 @@ func (provider *ProviderPassbolt) NewClient(ctx context.Context, store esv1beta1
 	provider.client = *client
 	return provider, nil
 }
+func assureLoggedIn(ctx context.Context, client *api.Client) error {
+	if !client.CheckSession(ctx) {
+		log.Println("PassboltClientLogin")
+		return client.Login(ctx)
+	}
+	return nil
+}
 
 func (provider *ProviderPassbolt) GetSecret(ctx context.Context, ref esv1beta1.ExternalSecretDataRemoteRef) ([]byte, error) {
-	if !provider.client.CheckSession(ctx) {
-		if err := provider.client.Login(ctx); err != nil {
-			return nil, err
-		}
+	log.Println("PassboltProviderGetSecret")
+
+	if err := assureLoggedIn(ctx, &provider.client); err != nil {
+		return nil, err
 	}
-	_, _, _, _, password, _, err := helper.GetResource(ctx, &provider.client, ref.Key)
+
+	prop := "password"
+	if ref.Property != "" {
+		prop = ref.Property
+	}
+
+	res, err := provider.GetSecretMap(ctx, ref)
 	if err != nil {
 		return nil, err
 	}
 
-	return []byte(password), nil
+	return res[prop], nil
 }
 
 func (provider *ProviderPassbolt) PushSecret(ctx context.Context, secret *corev1.Secret, data v1beta1.PushSecretData) error {
+
 	return nil
 }
 
@@ -63,7 +80,11 @@ func (provider *ProviderPassbolt) Validate() (v1beta1.ValidationResult, error) {
 }
 
 func (provider *ProviderPassbolt) GetSecretMap(ctx context.Context, ref v1beta1.ExternalSecretDataRemoteRef) (map[string][]byte, error) {
+	log.Println("PassboltProviderGetSecretMap")
 	res := make(map[string][]byte)
+	if err := assureLoggedIn(ctx, &provider.client); err != nil {
+		return res, err
+	}
 
 	folderParentID, name, username, uri, password, description, err := helper.GetResource(ctx, &provider.client, ref.Key)
 
@@ -81,13 +102,63 @@ func (provider *ProviderPassbolt) GetSecretMap(ctx context.Context, ref v1beta1.
 	return res, nil
 }
 
+type PassboltSecret struct {
+	Name        string `json:"name"`
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+	URI         string `json:"uri"`
+	Description string `json:"description"`
+}
+
+func getPassboltSecret(ctx context.Context, client *api.Client, id string) (*PassboltSecret, error) {
+	_, name, username, uri, password, description, err := helper.GetResource(ctx, client, id)
+	if err != nil {
+		return nil, err
+	}
+	return &PassboltSecret{Name: name, Username: username, URI: uri, Password: password, Description: description}, nil
+}
+
 func (provider *ProviderPassbolt) GetAllSecrets(ctx context.Context, ref v1beta1.ExternalSecretFind) (map[string][]byte, error) {
-	var res map[string][]byte
+	log.Println("PassboltProviderGetAllSecrets")
+	res := make(map[string][]byte)
+
+	if ref.Name.RegExp == "" {
+		return res, nil
+	}
+
+	if err := assureLoggedIn(ctx, &provider.client); err != nil {
+		return nil, err
+	}
+
+	resources, err := provider.client.GetResources(ctx, &api.GetResourcesOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, resource := range resources {
+		isMatch, err := regexp.Match(ref.Name.RegExp, []byte(resource.Name))
+		if err != nil {
+			return nil, err
+		}
+		if isMatch {
+			secret, err := getPassboltSecret(ctx, &provider.client, resource.ID)
+			if err != nil {
+				return nil, err
+			}
+			marshaled, err := json.Marshal(secret)
+			if err != nil {
+				return nil, err
+			}
+			res[resource.ID] = marshaled
+		}
+	}
+
 	return res, nil
 }
 
 func (provider *ProviderPassbolt) Close(ctx context.Context) error {
-	return nil
+	slog.InfoContext(ctx, "PassboltProviderClose")
+	return provider.client.Logout(ctx)
 }
 
 func init() {

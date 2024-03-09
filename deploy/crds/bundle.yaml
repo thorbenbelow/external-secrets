@@ -3504,20 +3504,20 @@ spec:
                         auth:
                           description: Auth defines the information necessary to authenticate against Passbolt Server
                           properties:
-                            userPassword:
+                            password:
                               type: string
-                            userPrivateKey:
+                            privateKey:
                               type: string
                           required:
-                            - userPassword
-                            - userPrivateKey
+                            - password
+                            - privateKey
                           type: object
-                        connectHost:
-                          description: ConnectHost defines the Passbolt Server to connect to
+                        host:
+                          description: Host defines the Passbolt Server to connect to
                           type: string
                       required:
                         - auth
-                        - connectHost
+                        - host
                       type: object
                     pulumi:
                       description: Pulumi configures this store to sync secrets using the Pulumi provider
@@ -8587,20 +8587,20 @@ spec:
                         auth:
                           description: Auth defines the information necessary to authenticate against Passbolt Server
                           properties:
-                            userPassword:
+                            password:
                               type: string
-                            userPrivateKey:
+                            privateKey:
                               type: string
                           required:
-                            - userPassword
-                            - userPrivateKey
+                            - password
+                            - privateKey
                           type: object
-                        connectHost:
-                          description: ConnectHost defines the Passbolt Server to connect to
+                        host:
+                          description: Host defines the Passbolt Server to connect to
                           type: string
                       required:
                         - auth
-                        - connectHost
+                        - host
                       type: object
                     pulumi:
                       description: Pulumi configures this store to sync secrets using the Pulumi provider
